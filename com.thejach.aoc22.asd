@@ -2,5 +2,9 @@
   :author "Jach"
   :license "Public Domain"
 
+  :depends-on ("cl-ppcre" "alexandria")
+
   :serial t
-  :components ((:file "main")))
+  :components ((:file "package")
+               (:file "puzzle-inputs")
+               (:file "main")))
