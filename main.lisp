@@ -36,4 +36,46 @@
     (format t "Part 2: ~a~%"
             (reduce #'+ (subseq elves 0 3) :key #'count-calories))))
 
-(day1)
+;;;; day 2
+
+; a b c => rock paper scissors
+; x y z => rock paper scissors
+; 1 point for self being rock, 2 for paper, 3 scissors
+; 0 point for loss, 3 point for draw, 6 for win
+(defun score-round (opponent self)
+  "Part 1 version"
+  (cond
+    ((and (eql opponent 'a) (eql self 'x)) (+ 1 3))
+    ((and (eql opponent 'a) (eql self 'y)) (+ 2 6))
+    ((and (eql opponent 'a) (eql self 'z)) (+ 3 0))
+    ((and (eql opponent 'b) (eql self 'x)) (+ 1 0))
+    ((and (eql opponent 'b) (eql self 'y)) (+ 2 3))
+    ((and (eql opponent 'b) (eql self 'z)) (+ 3 6))
+    ((and (eql opponent 'c) (eql self 'x)) (+ 1 6))
+    ((and (eql opponent 'c) (eql self 'y)) (+ 2 0))
+    ((and (eql opponent 'c) (eql self 'z)) (+ 3 3))
+    ))
+
+(defun day2 ()
+  (score-round 'a 'y)
+  (score-round 'b 'x)
+  (score-round 'c 'z)
+
+  (loop for (opponent self) on *day2-input* by #'cddr
+        summing (score-round opponent self)))
+
+; now x says need to lose, y says need to draw, z says need to win
+(defun score-round2 (opponent self)
+  "Part 2 version"
+  (cond
+    ((and (eql opponent 'a) (eql self 'x)) (+ 3 0)) ; choose paper to lose
+    ((and (eql opponent 'a) (eql self 'y)) (+ 1 3))
+    ((and (eql opponent 'a) (eql self 'z)) (+ 2 6))
+    ((and (eql opponent 'b) (eql self 'x)) (+ 1 0))
+    ((and (eql opponent 'b) (eql self 'y)) (+ 2 3))
+    ((and (eql opponent 'b) (eql self 'z)) (+ 3 6))
+    ((and (eql opponent 'c) (eql self 'x)) (+ 2 0))
+    ((and (eql opponent 'c) (eql self 'y)) (+ 3 3))
+    ((and (eql opponent 'c) (eql self 'z)) (+ 1 6))
+    ))
+
