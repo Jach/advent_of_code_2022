@@ -79,3 +79,37 @@
     ((and (eql opponent 'c) (eql self 'z)) (+ 1 6))
     ))
 
+;;;; day 3
+
+(defvar *sample-sacks* '("vJrwpWtwJgWrhcsFMMfFFhFp"
+                         "jqHRNqRjqzjGDLGLrsFMfFZSrLrFZsSL"
+                         "PmmdzqPrVvPwwTWBwg"
+                         "wMqvLMZHhHMvwLHjbvcjnnSBnvTQFn"
+                         "ttgJtRGJQctTZtZT"
+                         "CrZsJsPPZsGzwwsLwLmpwMDw"))
+
+(defun common-items (sack)
+  (let ((comp1 (coerce (subseq sack 0 (/ (length sack) 2)) 'list))
+        (comp2 (coerce (subseq sack (/ (length sack) 2)) 'list)))
+    (remove-duplicates (intersection comp1 comp2))))
+
+(defun prioritize-letter (char)
+  (cond
+    ((<= (char-code #\a) (char-code char) (char-code #\z))
+     (1+ (- (char-code char) (char-code #\a))))
+    ((<= (char-code #\A) (char-code char) (char-code #\Z))
+     (+ 27 (- (char-code char) (char-code #\A))))))
+
+
+(defun day3 ()
+  (reduce #'+ (mapcar (lambda (sack) (mapcar #'prioritize-letter (common-items sack))) *sample-sacks*) :key #'first)
+  (format t "Part 1: ~a~%"
+          (reduce #'+ (mapcar (lambda (sack) (mapcar #'prioritize-letter (common-items sack))) *day3-input*) :key #'first))
+
+  (format t "Part 2: ~a~%"
+          (loop for (elf1 elf2 elf3) on *day3-input* by #'cdddr
+                summing (reduce #'+ (mapcar #'prioritize-letter
+                                            (remove-duplicates (intersection (coerce elf3 'list)
+                                                                             (intersection (coerce elf1 'list) (coerce elf2 'list)))))))))
+
+
