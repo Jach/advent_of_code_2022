@@ -113,3 +113,54 @@
                                                                              (intersection (coerce elf1 'list) (coerce elf2 'list)))))))))
 
 
+;;;; day 4
+
+(defvar *day4-sample* "2-4,6-8
+2-3,4-5
+5-7,7-9
+2-8,3-7
+6-6,4-6
+2-6,4-8")
+
+
+(defun extract-pair-ranges (input)
+  (let ((pairs (cl-ppcre:split "\\n" input)))
+    (loop for pair in pairs
+          collect
+          (let* ((pair-halves (cl-ppcre:split "," pair))
+                 (ranged-pair-halves (mapcar (lambda (range)
+                                               (mapcar #'parse-integer (cl-ppcre:split "-" range)))
+                                             pair-halves)))
+            ranged-pair-halves))))
+
+(defun fully-overlapping-pairs (ranged-pair-halves &aux (total 0))
+  (loop for pair in ranged-pair-halves
+        do
+        (let ((p1-lower (first (first pair)))
+              (p1-upper (second (first pair)))
+              (p2-lower (first (second pair)))
+              (p2-upper (second (second pair))))
+          (when (or (<= p1-lower p2-lower p2-upper p1-upper)
+                    (<= p2-lower p1-lower p1-upper p2-upper))
+            (incf total))))
+  total)
+
+(defun overlapping-pairs (ranged-pair-halves &aux (total 0))
+  (loop for pair in ranged-pair-halves
+        do
+        (let ((p1-lower (first (first pair)))
+              (p1-upper (second (first pair)))
+              (p2-lower (first (second pair)))
+              (p2-upper (second (second pair))))
+          (when (or (<= p1-lower p2-lower p1-upper)
+                    (<= p1-lower p2-upper p1-upper)
+                    (<= p2-lower p1-lower p2-upper)
+                    (<= p2-lower p1-upper p2-upper))
+            (incf total))))
+  total)
+
+(defun day4 ()
+  (format t "Part 1: ~a~%"
+          (fully-overlapping-pairs (extract-pair-ranges *day4-input*)))
+  (format t "Part 1: ~a~%"
+          (overlapping-pairs (extract-pair-ranges *day4-input*))))
