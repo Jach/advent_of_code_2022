@@ -2,7 +2,7 @@
   :author "Jach"
   :license "Public Domain"
 
-  :depends-on ("cl-ppcre" "alexandria")
+  :depends-on ("cl-ppcre" "alexandria" "let-plus")
 
   :serial t
   :components ((:file "package")

@@ -164,3 +164,69 @@
           (fully-overlapping-pairs (extract-pair-ranges *day4-input*)))
   (format t "Part 1: ~a~%"
           (overlapping-pairs (extract-pair-ranges *day4-input*))))
+
+
+;;;; day 5
+
+(defvar *day5-sample* "
+    [D]
+[N] [C]
+[Z] [M] [P]
+ 1   2   3
+
+move 1 from 2 to 1
+move 3 from 1 to 3
+move 2 from 2 to 1
+move 1 from 1 to 2")
+
+(defun initialize-stacks (stacks stack-contents)
+  (loop for stack-row in (reverse stack-contents)
+        do
+        (dotimes (i (length stack-row))
+          (unless (equal (elt stack-row i) "")
+            (push (elt stack-row i) (aref stacks i))))))
+
+(defun day5 ()
+  (let+ (((stacks-data moves-data) (cl-ppcre:split "\\n\\n" *day5-input*))
+         (stack-lines (cl-ppcre:split "\\n" stacks-data))
+         (stack-count (parse-integer (car (last (cl-ppcre:split "( )+" (car (last stack-lines)))))))
+         (stacks (make-array stack-count :initial-element (list)))
+         (content-matcher "((\\[[A-Z]\\]|   ) ?)")
+         (stack-contents (remove-if (lambda (line)
+                                      (or (null line)
+                                          (every (lambda (s) (equal s "")) line)))
+                                    (loop for line in stack-lines
+                                          collect
+                                          (mapcar (lambda (s)
+                                                    (string-trim '(#\space) (cl-ppcre:regex-replace-all "(\\[|\\])" s "")))
+                                                  (cl-ppcre:all-matches-as-strings content-matcher line))))))
+    (initialize-stacks stacks stack-contents)
+
+    (let ((move-matcher "move ([0-9]+) from ([0-9]+) to ([0-9]+)"))
+      (loop for move in (cl-ppcre:split "\\n" moves-data)
+            do
+            (cl-ppcre:register-groups-bind (amount src dest) (move-matcher move)
+              (dotimes (i (parse-integer (string amount)))
+                (push (pop (aref stacks (1- (parse-integer (string src)))))
+                      (aref stacks (1- (parse-integer (string dest)))))))))
+
+    (format t "Part 1: ~a~%"
+            (apply #'uiop:strcat (loop for stack across stacks
+                                       collect (first stack))))
+
+    (initialize-stacks stacks stack-contents)
+
+    (let ((move-matcher "move ([0-9]+) from ([0-9]+) to ([0-9]+)"))
+      (loop for move in (cl-ppcre:split "\\n" moves-data)
+            for crates = (list)
+            do
+            (cl-ppcre:register-groups-bind (amount src dest) (move-matcher move)
+              (dotimes (i (parse-integer (string amount)))
+                (push (pop (aref stacks (1- (parse-integer (string src)))))
+                      crates))
+              (loop for c in crates do (push c (aref stacks (1- (parse-integer (string dest)))))))))
+
+    (format t "Part 2: ~a~%"
+            (apply #'uiop:strcat (loop for stack across stacks
+                                       collect (first stack))))))
+
