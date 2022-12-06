@@ -230,3 +230,16 @@ move 1 from 1 to 2")
             (apply #'uiop:strcat (loop for stack across stacks
                                        collect (first stack))))))
 
+;;;; day 6
+
+(defun find-marker (sample &key (distinct-chars 4))
+  (loop for i below (length sample)
+        do
+        (when (= distinct-chars (length (remove-duplicates (subseq sample i (+ i distinct-chars)))))
+          (return (+ i distinct-chars)))))
+
+(defun day6 ()
+  (format t "Part 1: ~a~%"
+          (find-marker *day6-input* :distinct-chars 4))
+  (format t "Part 2: ~a~%"
+          (find-marker *day6-input* :distinct-chars 14)))
