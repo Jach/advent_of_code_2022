@@ -243,3 +243,98 @@ move 1 from 1 to 2")
           (find-marker *day6-input* :distinct-chars 4))
   (format t "Part 2: ~a~%"
           (find-marker *day6-input* :distinct-chars 14)))
+
+
+;;;; day 7
+
+(defvar *day7-sample* "$ cd /
+$ ls
+dir a
+14848514 b.txt
+8504156 c.dat
+dir d
+$ cd a
+$ ls
+dir e
+29116 f
+2557 g
+62596 h.lst
+$ cd e
+$ ls
+584 i
+$ cd ..
+$ cd ..
+$ cd d
+$ ls
+4060174 j
+8033020 d.log
+5626152 d.ext
+7214296 k")
+
+(defclass folder ()
+  ((name :accessor .name :initarg :name)
+   (parent :accessor .parent :initarg :parent)
+   (contents :accessor .contents :initform (list) :documentation "List of folders or files")))
+
+(defmethod get-subdir ((self folder) dir-name)
+  (find dir-name (.contents self) :key #'.name :test #'equal))
+
+(defclass file ()
+  ((name :accessor .name :initarg :name)
+   (size :accessor .size :initarg :size)))
+
+(defun construct-filesystem (input)
+  (let* ((filesystem (make-instance 'folder :name "/"))
+         (commands (mapcar (lambda (cmd) (cl-ppcre:split "\\n" cmd))
+                           (cdr (cl-ppcre:split "\\$ " input))))
+         (pwd nil))
+    (loop for command in commands do
+          (cond
+            ((str:starts-with? "cd" (first command))
+             (let ((dir-name (second (cl-ppcre:split " " (first command)))))
+               (cond
+                 ((equal "/" dir-name)
+                  (setf pwd filesystem))
+                 ((equal ".." dir-name)
+                  (setf pwd (.parent pwd)))
+                 (:otherwise
+                   (setf pwd (get-subdir pwd dir-name))))))
+            ((equal (first command) "ls")
+             (loop for content in (cdr command) do
+                   (let+ (((dir-or-size name) (cl-ppcre:split " " content)))
+                     (push (if (equal "dir" dir-or-size)
+                               (make-instance 'folder :name name :parent pwd)
+                               (make-instance 'file :name name :size (parse-integer dir-or-size)))
+                           (.contents pwd)))))))
+    filesystem))
+
+(defmethod total-size ((folder folder))
+  (reduce #'+ (mapcar #'total-size (.contents folder))))
+
+(defmethod total-size ((file file))
+  (.size file))
+
+(defun all-subdirs (filesystem)
+  (alexandria:flatten
+    (loop for content in (.contents filesystem)
+        if (eql (type-of content) 'folder)
+        collect (cons content (all-subdirs content)))))
+
+(defun total-size-of-max (filesystem max)
+  (reduce #'+ (remove-if (lambda (size) (> size max))
+                         (mapcar #'total-size (all-subdirs filesystem)))))
+
+(defun smallest-when-deleted-gives-needed-space (filesystem max-available needed-space)
+  (let* ((total (total-size filesystem))
+         (unused (- max-available total))
+         (free-up-min (- needed-space unused)))
+    (find-if (lambda (size) (>= size free-up-min))
+             (sort (mapcar #'total-size (all-subdirs filesystem)) #'<))))
+
+(defun day7 ()
+  (format t "Part 1: ~a~%"
+          (total-size-of-max (construct-filesystem *day7-input*) 100000))
+
+  (format t "Part 2: ~a~%"
+          (smallest-when-deleted-gives-needed-space (construct-filesystem *day7-input*) 70000000 30000000)))
+
