@@ -338,3 +338,64 @@ $ ls
   (format t "Part 2: ~a~%"
           (smallest-when-deleted-gives-needed-space (construct-filesystem *day7-input*) 70000000 30000000)))
 
+
+;;;; day 8
+
+(defvar *day8-sample* "30373
+25512
+65332
+33549
+35390")
+
+(defun construct-treegrid (input)
+  (let* ((rows (cl-ppcre:split "\\n" input))
+         (col-count (length (first rows)))
+         (grid (make-array (list (length rows) col-count))))
+    (loop for i below (length rows)
+          for row in rows do
+          (loop for j below col-count do
+                (setf (aref grid i j) (parse-integer (string (elt row j))))))
+    grid))
+
+(defun visible? (grid i j)
+  "True if point at row i and col j is visible to the outside"
+  (let ((height (aref grid i j)))
+    (some #'identity
+          (loop for neighbors in
+                (list
+                  ; everything to the left
+                  (loop for x from 0 below j collect (aref grid i x))
+                  ; everything to the right
+                  (loop for x from (1+ j) below (array-dimension grid 1) collect (aref grid i x))
+                  ; everything above
+                  (loop for y from 0 below i collect (aref grid y j))
+                  ; everything below
+                  (loop for y from (1+ i) below (array-dimension grid 0) collect (aref grid y j)))
+                collect (every (lambda (el) (< el height)) neighbors)))))
+
+(defun scenic-score (grid i j)
+  (let ((height (aref grid i j)))
+    (* (viewing-distance height (reverse (loop for x from 0 below j collect (aref grid i x)))) ; left
+       (viewing-distance height (loop for x from (1+ j) below (array-dimension grid 1) collect (aref grid i x))) ; right
+       (viewing-distance height (reverse (loop for y from 0 below i collect (aref grid y j)))) ; above
+       (viewing-distance height (loop for y from (1+ i) below (array-dimension grid 0) collect (aref grid y j)))))) ; below
+
+(defun viewing-distance (height trees)
+  (let ((sum 0))
+    (loop for tree in trees do
+          (incf sum)
+          (when (>= tree height)
+            (loop-finish)))
+    sum))
+
+(defun day8 ()
+  (let ((grid (construct-treegrid *day8-input*)))
+    (format t "Part 1: ~a~%"
+            (loop for i below (array-dimension grid 0) summing
+                  (loop for j below (array-dimension grid 1) counting
+                        (visible? grid i j))))
+
+    (format t "Part 2: ~a~%"
+            (loop for i below (array-dimension grid 0) maximizing
+                  (loop for j below (array-dimension grid 1) maximizing
+                        (scenic-score grid i j))))))
