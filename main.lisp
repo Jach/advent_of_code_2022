@@ -399,3 +399,79 @@ $ ls
             (loop for i below (array-dimension grid 0) maximizing
                   (loop for j below (array-dimension grid 1) maximizing
                         (scenic-score grid i j))))))
+
+
+;;;; day 9
+
+(defvar *day9-sample* '(
+R 4
+U 4
+L 3
+D 1
+R 4
+D 1
+L 5
+R 2))
+
+(defun day9-part1 ()
+  (let ((head (complex 0 0))
+        (tail (complex 0 0))
+        (tail-positions (list)))
+    (loop for (direction amount) on *day9-input* by #'cddr
+          do
+          (dotimes (i amount)
+            (case direction
+              (r (incf head 1))
+              (l (decf head 1))
+              (u (incf head #C(0 1)))
+              (d (decf head #C(0 1))))
+            (when (not (adjacent? head tail))
+              (push tail tail-positions)
+              (incf tail (approach-head tail head)))))
+    (1+ (length (remove-duplicates tail-positions)))))
+
+(defun adjacent? (head tail)
+  (<= (abs (- head tail))
+      (abs #C(1 1))))
+
+(defun approach-head (tail head)
+  "Move tail one unit closer to head"
+  (let ((dist (- head tail)))
+    (complex (if (plusp (realpart dist))
+                 (min (realpart dist) 1)
+                 (max (realpart dist) -1))
+             (if (plusp (imagpart dist))
+                 (min (imagpart dist) 1)
+                 (max (imagpart dist) -1)))))
+
+(defvar *day9-sample2* '(
+R 5
+U 8
+L 8
+D 3
+R 17
+D 10
+L 25
+U 20))
+
+(defun day9-part2 ()
+  (let ((head (complex 0 0))
+        (tails (coerce (loop for i from 1 to 9 collect (complex 0 0)) 'vector))
+        (last-tail-positions (list)))
+    (loop for (direction amount) on *day9-input* by #'cddr
+          do
+          (dotimes (i amount)
+            (case direction
+              (r (incf head 1))
+              (l (decf head 1))
+              (u (incf head #C(0 1)))
+              (d (decf head #C(0 1))))
+            (let ((ref-head head))
+              (loop for tail-idx from 0 below (length tails)
+                    do
+                    (when (not (adjacent? ref-head (aref tails tail-idx)))
+                      (when (= tail-idx (1- (length tails)))
+                        (push (aref tails tail-idx) last-tail-positions))
+                      (incf (aref tails tail-idx) (approach-head (aref tails tail-idx) ref-head)))
+                    (setf ref-head (aref tails tail-idx))))))
+    (1+ (length (remove-duplicates last-tail-positions)))))
