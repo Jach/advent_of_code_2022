@@ -475,3 +475,75 @@ U 20))
                       (incf (aref tails tail-idx) (approach-head (aref tails tail-idx) ref-head)))
                     (setf ref-head (aref tails tail-idx))))))
     (1+ (length (remove-duplicates last-tail-positions)))))
+
+;;;; day 10
+
+(defparameter *day10-sample* "noop
+addx 3
+addx -5")
+
+(defclass simple-cpu ()
+  ((current-cycle :accessor .current-cycle :initform 0)
+   (reg-X :accessor .reg-X :initform 1)))
+
+(defmethod instruction-cycles ((instruction (eql 'noop)))
+  1)
+(defmethod instruction-cycles ((instruction (eql 'addx)))
+  2)
+(defmethod execute-after ((cpu simple-cpu) (instruction (eql 'addx)) &rest args)
+  (incf (.reg-X cpu) (first args)))
+
+(defun iter-cycles (cpu cycles)
+  "Iterates cpu by cycles, returning a non-zero signal strength
+   if we pass over an interesting cycle number"
+  (let ((strength 0))
+    (dotimes (i cycles)
+      (incf (.current-cycle cpu))
+      (when (= 20 (mod (.current-cycle cpu) 40)) ; triggers
+        (setf strength (* (.current-cycle cpu) (.reg-X cpu)))))
+    strength))
+
+(defun day10-part1 ()
+  (let ((cpu (make-instance 'simple-cpu))
+        (strength-sum 0))
+    (loop for instruction in (cl-ppcre:split "\\n" *day10-input*)
+          do
+          (cond
+            ((str:starts-with? "noop" instruction)
+             (incf strength-sum (iter-cycles cpu (instruction-cycles 'noop))))
+
+            ((str:starts-with? "addx" instruction)
+             (incf strength-sum (iter-cycles cpu (instruction-cycles 'addx)))
+             (execute-after cpu 'addx (parse-integer (second (str:split " " instruction)))))))
+    strength-sum))
+
+(defun print-crt (crt)
+  (loop for r below (array-dimension crt 0) do
+        (loop for c below (array-dimension crt 1) do
+              (format t "~a" (aref crt r c)))
+        (format t "~%")))
+
+(defun iter-cycles2 (cpu cycles crt)
+  "Iterates cpu by cycles, also drawing to crt each cycle."
+  (let ((current-sprite-left (1- (.reg-x cpu))))
+    (dotimes (i cycles)
+      (setf (row-major-aref crt (mod (.current-cycle cpu) (array-total-size crt)))
+            (if (<= current-sprite-left (mod (.current-cycle cpu) (array-dimension crt 1)) (+ 2 current-sprite-left))
+                #\#
+                #\.))
+      (incf (.current-cycle cpu)))))
+
+(defun day10-part2 ()
+  (let ((cpu (make-instance 'simple-cpu))
+        (crt (make-array '(6 40) :initial-element #\.)))
+    (loop for instruction in (cl-ppcre:split "\\n" *day10-input*)
+          do
+          (cond
+            ((str:starts-with? "noop" instruction)
+             (iter-cycles2 cpu (instruction-cycles 'noop) crt))
+
+            ((str:starts-with? "addx" instruction)
+             (iter-cycles2 cpu (instruction-cycles 'addx) crt)
+             (execute-after cpu 'addx (parse-integer (second (str:split " " instruction)))))))
+    (print-crt crt)))
+
