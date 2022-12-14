@@ -649,4 +649,80 @@ Better data structures won't really help though I did refactor the starting item
     monkeys)
 |#
 
+;;;; day 12
+
+(defparameter *day12-sample* "Sabqponm
+abcryxxl
+accszExk
+acctuvwj
+abdefghi")
+
+(defun make-heightmap (input)
+  (let* ((rows (cl-ppcre:split "\\n" input))
+         (n-cols (length (first rows)))
+         (map (make-array (list (length rows) n-cols))))
+    (loop for r below (length rows) do
+          (loop for c below n-cols do
+                (setf (aref map r c) (elt (elt rows r) c))))
+    map))
+
+(defun elevation (char)
+  (case char
+    (#\S (char-code #\a))
+    (#\E (char-code #\z))
+    (t (char-code char))))
+
+(defun valid-neighbors (heightmap location)
+  "Up/down/left/right, within bounds, and destination must be at most one step higher.
+   Assume cost of each step is 1."
+  (let+ (((rows cols) (array-dimensions heightmap))
+         ((r c) location)
+         (dirs (list (list r (1- c))
+                     (list r (1+ c))
+                     (list (1- r) c)
+                     (list (1+ r) c))))
+    (mapcar (lambda (neighbor)
+              (list neighbor 1))
+            (remove-if-not (lambda (el)
+                             (let+ (((el-r el-c) el))
+                               (and
+                                 (and (<= 0 el-r (1- rows))
+                                      (<= 0 el-c (1- cols)))
+                                 (>= (1+ (elevation (aref heightmap r c)))
+                                     (elevation (aref heightmap el-r el-c))))))
+                           dirs))))
+
+(defun day12 ()
+  ;; part 1:
+  (let* ((heightmap (make-heightmap *day12-input*))
+         (pathfinder (make-instance 'lgame.pathfinding::A*
+                                    :size (array-dimensions heightmap)
+                                    ;:start-pos '(0 0)
+                                    :start-pos '(20 0)
+                                    ;:end-pos '(2 5)
+                                    :end-pos '(20 58)
+                                    :neighbor-fn (lambda (location)
+                                                   (valid-neighbors heightmap location)))))
+    (lgame.pathfinding:compute-path pathfinder :single-step? t :new-request? t)
+    (1- (length (lgame.pathfinding:.waypoint-list pathfinder))))
+
+  ;; part 2:
+  (let* ((heightmap (make-heightmap *day12-input*))
+         (lowest-elevation-starting-positions
+           (loop for r below (array-dimension heightmap 0) append
+                 (loop for c below (array-dimension heightmap 1)
+                       if (= (elevation #\a) (elevation (aref heightmap r c)))
+                       collect (list r c)))))
+    (loop for starting in lowest-elevation-starting-positions minimize
+          (let ((pathfinder (make-instance 'lgame.pathfinding:A*
+                                           :size (array-dimensions heightmap)
+                                           :start-pos starting
+                                           :end-pos '(20 58)
+                                           :neighbor-fn (lambda (location)
+                                                          (valid-neighbors heightmap location)))))
+            (lgame.pathfinding:compute-path pathfinder :single-step? t :new-request? t)
+            (let ((path (lgame.pathfinding:.waypoint-list pathfinder)))
+              (if (plusp (length path)) ; only consider where there is a path
+                  (1- (length path))
+                  most-positive-fixnum))))))
 
