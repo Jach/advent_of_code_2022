@@ -547,3 +547,106 @@ addx -5")
              (execute-after cpu 'addx (parse-integer (second (str:split " " instruction)))))))
     (print-crt crt)))
 
+;;;; day 11
+
+(defvar *day11-sample* "Monkey 0:
+  Starting items: 79, 98
+  Operation: new = old * 19
+  Test: divisible by 23
+    If true: throw to monkey 2
+    If false: throw to monkey 3
+
+Monkey 1:
+  Starting items: 54, 65, 75, 74
+  Operation: new = old + 6
+  Test: divisible by 19
+    If true: throw to monkey 2
+    If false: throw to monkey 0
+
+Monkey 2:
+  Starting items: 79, 60, 97
+  Operation: new = old * old
+  Test: divisible by 13
+    If true: throw to monkey 1
+    If false: throw to monkey 3
+
+Monkey 3:
+  Starting items: 74
+  Operation: new = old + 3
+  Test: divisible by 17
+    If true: throw to monkey 0
+    If false: throw to monkey 1")
+
+(defclass monkey ()
+  ((id :accessor .id :initarg :id)
+   (items :accessor .items :initarg :items)
+   (operation :accessor .operation :initarg :operation)
+   (test :accessor .test :initarg :test)
+   (inspections :accessor .inspections :initform 0)))
+
+(defmethod print-object ((self monkey) stream)
+  (print-unreadable-object (self stream :type t :identity t)
+    ;(format stream "id ~a items ~a operation ~a test ~a" (.id self) (.items self) (.operation self) (.test self))))
+    (format stream "id ~a items ~a inspections ~a" (.id self) (.items self) (.inspections self))))
+
+(defun make-monkeys (input)
+  (loop for monkey in (cl-ppcre:split "\\n\\n" input) collect
+      (let+ (((id starting op test if-test if-not-test) (cl-ppcre:split "\\n" monkey))
+             (starting (second (cl-ppcre:split ":" starting)))
+             (starting (mapcar #'parse-integer (cl-ppcre:split "," starting)))
+             (items (make-array 10 :fill-pointer 0)))
+        (loop for el in starting do (vector-push el items))
+        (make-instance 'monkey
+                       :id id
+                       :items items
+                       :operation (let ((operation (read-from-string (uiop:strcat "(" (second (cl-ppcre:split "= " op)) ")"))))
+                                    (rotatef (elt operation 0) (elt operation 1))
+                                    (eval `(lambda (old) ,operation)))
+                       :test (lambda (n)
+                               (if (zerop (mod n (parse-integer (second (cl-ppcre:split "by " test)))))
+                                   (parse-integer (second (cl-ppcre:split "monkey " if-test)))
+                                   (parse-integer (second (cl-ppcre:split "monkey " if-not-test)))))))))
+(vector-push 3 (make-array 5 :fill-pointer 0))
+
+(defun day11 ()
+  ; part 1
+  (let ((monkeys (make-monkeys *day11-sample*)))
+    (dotimes (round 20)
+      (loop for monkey in monkeys do
+            (loop for item across (.items monkey) do
+                  ; inspect
+                  (setf item (funcall (.operation monkey) item))
+                  (incf (.inspections monkey))
+                  ; relief
+                  (setf item (floor (/ item 3)))
+                  ; test and throw
+                  (let ((next-monkey (funcall (.test monkey) item)))
+                    (vector-push item (.items (elt monkeys next-monkey)))))
+            ; monkey can't throw to itself, so after processing, array can be 'emptied'
+            (setf (fill-pointer (.items monkey)) 0)))
+    (apply #'* (subseq (sort (mapcar #'.inspections monkeys)  #'>) 0 2)))
+  )
+
+
+#|
+Coming back to part 2 later, probably some trick with relativley prime numbers or the graph flow reduction?
+Better data structures won't really help though I did refactor the starting items to a max-length fixed array...
+  ; part 2
+  (let ((monkeys (make-monkeys *day11-sample*)))
+    (dotimes (round 10000)
+      (loop for monkey in monkeys do
+            (loop for item across (.items monkey) do
+                  ; inspect
+                  (setf item (funcall (.operation monkey) item))
+                  (incf (.inspections monkey))
+                  ; relief
+                  (setf item (floor (/ item 17)))
+                  ; test and throw
+                  (let ((next-monkey (funcall (.test monkey) item)))
+                    (vector-push item (.items (elt monkeys next-monkey)))))
+            ; monkey can't throw to itself, so after processing, array can be 'emptied'
+            (setf (fill-pointer (.items monkey)) 0)))
+    monkeys)
+|#
+
+
